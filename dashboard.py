@@ -18,6 +18,7 @@ def generate_sample_data(n=150, seed=42):
     names = [f"Student_{i}" for i in range(n)]
     mentors = [f"mentor_{i%6}" for i in range(n)]
     courses = [f"CE-{(i%4)+1}" for i in range(n)]
+    emails = [f"student{i}@example.com" for i in range(n)]
 
     attendance = np.clip(np.random.normal(80, 12, n).round(1), 30, 100)
     failed_attempts = np.random.choice([0,0,0,1,1,2], n, p=[0.5,0.2,0.1,0.1,0.06,0.04])
@@ -31,7 +32,8 @@ def generate_sample_data(n=150, seed=42):
         "name": names,
         "course": courses,
         "mentor": mentors,
-        "attendance_percent": attendance
+        "attendance_percent": attendance,
+        "email": emails
     })
 
     scores_df = pd.DataFrame({
@@ -55,10 +57,8 @@ def generate_sample_data(n=150, seed=42):
 # Rule engine
 # -----------------------
 def evaluate_risk(df, thresholds):
-    labels = []
-    flags = []
+    labels, flags, risk_scores = [], [], []
     score_map = {"green":0,"amber":1,"red":2}
-    risk_scores = []
 
     for _, r in df.iterrows():
         f = {}
@@ -110,7 +110,7 @@ def evaluate_risk(df, thresholds):
     return df
 
 # -----------------------
-# Data loading
+# Data loading / merging
 # -----------------------
 @st.cache_data
 def load_and_merge(att_path=None, scores_path=None, fees_path=None):
@@ -122,7 +122,7 @@ def load_and_merge(att_path=None, scores_path=None, fees_path=None):
             if "last_payment_date" in fees.columns:
                 fees["last_payment_date"] = pd.to_datetime(fees["last_payment_date"], errors="coerce")
         except Exception as e:
-            st.warning("Could not read provided CSVs. Using sample data. Error: " + str(e))
+            st.warning("Could not read provided CSVs. Falling back to sample data. Error: " + str(e))
             att, sc, fees = generate_sample_data()
     else:
         att, sc, fees = generate_sample_data()
@@ -137,23 +137,19 @@ def load_and_merge(att_path=None, scores_path=None, fees_path=None):
     df["last_payment_date"] = pd.to_datetime(df.get("last_payment_date"), errors="coerce")
     df["fees_overdue_days"] = (today - df["last_payment_date"]).dt.days.fillna(999)
 
-    cols = ["student_id","name","course","mentor","attendance_percent","avg_score","failed_attempts","fees_overdue_days"]
+    cols = ["student_id","name","course","mentor","email","attendance_percent","avg_score","failed_attempts","fees_overdue_days"]
     for c in cols:
         if c not in df.columns:
             df[c] = ""
     return df[cols]
 
 # -----------------------
-# Stricter alert detection
+# Alerts processing
 # -----------------------
 def detect_streaks(series, threshold):
-    streaks = []
-    count = 0
+    streaks, count = [], 0
     for val in series:
-        if val:
-            count += 1
-        else:
-            count = 0
+        count = count + 1 if val else 0
         streaks.append(count)
     return max(streaks) >= threshold
 
@@ -176,10 +172,8 @@ def process_daily_activity(activity_df, master_df, thresholds):
 
         if detect_streaks(g["attended"].eq(0), thresholds["attendance_days"]):
             alerts.append((sid, "consecutive_absences", f"Absent streak >= {thresholds['attendance_days']}"))
-
         if detect_streaks(g["assignment_submitted"].eq(0), thresholds["assignment_days"]):
             alerts.append((sid, "consecutive_assignment_misses", f"Missed assignments streak >= {thresholds['assignment_days']}"))
-
         if "score" in g.columns:
             low_scores = g["score"] < thresholds["score_cutoff"]
             if detect_streaks(low_scores, thresholds["score_days"]):
@@ -188,12 +182,12 @@ def process_daily_activity(activity_df, master_df, thresholds):
     alerts_df = pd.DataFrame(alerts, columns=["student_id","alert_type","details"])
     if alerts_df.empty:
         return alerts_df
-    md = master_df[["student_id","name","mentor"]].drop_duplicates(subset=["student_id"])
+    md = master_df[["student_id","name","mentor","email"]].drop_duplicates(subset=["student_id"])
     alerts_df = alerts_df.merge(md, on="student_id", how="left")
-    return alerts_df[["student_id","name","mentor","alert_type","details"]]
+    return alerts_df[["student_id","name","mentor","email","alert_type","details"]]
 
 # -----------------------
-# Sidebar inputs
+# Sidebar: file upload + thresholds
 # -----------------------
 st.sidebar.header("Data Input")
 uploaded_att = st.sidebar.file_uploader("Upload attendance CSV", type=["csv"])
@@ -226,38 +220,26 @@ thresholds = {
     "fees_overdue_days_amber": fees_amber
 }
 
-# Alert rule config
 st.sidebar.header("Alert Rule Configuration")
-alert_attendance_days = st.sidebar.number_input("Consecutive absences (alert if >=)", 1, 30, 3)
-alert_score_days = st.sidebar.number_input("Consecutive low scores (alert if >=)", 1, 30, 3)
-alert_assignment_days = st.sidebar.number_input("Consecutive assignment misses (alert if >=)", 1, 30, 3)
-
 alert_thresholds = {
-    "attendance_days": alert_attendance_days,
-    "score_days": alert_score_days,
-    "assignment_days": alert_assignment_days,
+    "attendance_days": st.sidebar.number_input("Consecutive absences (>=)", 1, 30, 3),
+    "score_days": st.sidebar.number_input("Consecutive low scores (>=)", 1, 30, 3),
+    "assignment_days": st.sidebar.number_input("Consecutive assignment misses (>=)", 1, 30, 3),
     "score_cutoff": 40
 }
 
 # -----------------------
-# Load and process
+# Load and process data
 # -----------------------
-if use_uploaded and process_now:
-    df = load_and_merge(uploaded_att, uploaded_scores, uploaded_fees)
-else:
-    df = load_and_merge()
-
+df = load_and_merge(uploaded_att, uploaded_scores, uploaded_fees) if (use_uploaded and process_now) else load_and_merge()
 df = evaluate_risk(df, thresholds)
 
-alerts_df = pd.DataFrame(columns=["student_id","name","mentor","alert_type","details"])
+alerts_df = pd.DataFrame(columns=["student_id","name","mentor","email","alert_type","details"])
 if uploaded_activity and process_activity_now:
     try:
         activity_df = pd.read_csv(uploaded_activity)
         alerts_df = process_daily_activity(activity_df, df, alert_thresholds)
-        if alerts_df.empty:
-            st.sidebar.success("No alerts detected.")
-        else:
-            st.sidebar.warning(f"{len(alerts_df)} alert(s) detected.")
+        st.sidebar.success(f"{len(alerts_df)} alert(s) detected.") if not alerts_df.empty else st.sidebar.success("No alerts detected.")
     except Exception as e:
         st.sidebar.error("Error processing daily activity: " + str(e))
 
@@ -267,32 +249,32 @@ if uploaded_activity and process_activity_now:
 st.title("Dropout Risk Dashboard")
 st.markdown("Monitor students and catch risks early.")
 
+# metrics
 total = len(df)
 counts = df["rule_label"].value_counts().reindex(["Red","Amber","Green"]).fillna(0).astype(int)
 c1, c2, c3, c4 = st.columns([1,1,1,2])
-c1.metric("Total", total)
+c1.metric("Total students", total)
 c2.metric("Red", counts["Red"])
 c3.metric("Amber", counts["Amber"])
 c4.metric("Green", counts["Green"])
 
 # -----------------------
-# Alerts panel with SMTP
+# Alerts panel
 # -----------------------
 st.subheader("Alerts from daily activity")
 if alerts_df.empty:
     st.info("No alerts. Upload daily activity and click Process Daily Activity.")
 else:
     st.table(alerts_df)
-    selected = st.multiselect("Select student ids to notify", alerts_df["student_id"].tolist())
+    selected_ids = st.multiselect("Select students to notify", alerts_df["student_id"].tolist())
     smtp_server = st.text_input("SMTP server", "smtp.gmail.com")
     smtp_port = st.number_input("SMTP port", 1, 9999, 587)
     sender_email = st.text_input("Sender email")
     sender_pass = st.text_input("Sender password", type="password")
-    recipient = st.text_input("Recipient email")
     if st.button("Send selected notifications"):
         import smtplib
         from email.mime.text import MIMEText
-        sel_alerts = alerts_df[alerts_df["student_id"].isin(selected)] if selected else alerts_df
+        sel_alerts = alerts_df[alerts_df["student_id"].isin(selected_ids)] if selected_ids else alerts_df
         for _, row in sel_alerts.iterrows():
             subject = f"Alert: {row['alert_type']} for {row['student_id']}"
             body = f"Student: {row['name']} ({row['student_id']})\nMentor: {row['mentor']}\nAlert: {row['alert_type']}\nDetails: {row['details']}"
@@ -300,13 +282,16 @@ else:
                 msg = MIMEText(body)
                 msg["Subject"] = subject
                 msg["From"] = sender_email
-                msg["To"] = recipient
+                msg["To"] = row["email"]
                 with smtplib.SMTP(smtp_server, smtp_port) as server:
                     server.starttls()
                     server.login(sender_email, sender_pass)
-                    server.sendmail(sender_email, [recipient], msg.as_string())
-                st.success(f"Email sent for {row['student_id']}")
+                    server.sendmail(sender_email, [row["email"]], msg.as_string())
+                st.success(f"Email sent to {row['email']} for {row['student_id']}")
             except Exception as e:
-                st.error(f"Failed to send for {row['student_id']}: {e}")
+                st.error(f"Failed for {row['student_id']}: {e}")
 
-# ... (rest of your student details, charts, and actions stay unchanged)
+# -----------------------
+# Students table + details + charts + actions (same as old code)
+# -----------------------
+# ... keep the same students table, student details, charts, flag counts, and actions code from your old script here ...
