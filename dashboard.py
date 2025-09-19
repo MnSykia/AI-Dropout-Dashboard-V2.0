@@ -292,6 +292,127 @@ else:
                 st.error(f"Failed for {row['student_id']}: {e}")
 
 # -----------------------
-# Students table + details + charts + actions (same as old code)
+# Filters
 # -----------------------
-# ... keep the same students table, student details, charts, flag counts, and actions code from your old script here ...
+with st.expander("Filters"):
+    mentors = sorted(df["mentor"].dropna().unique().tolist())
+    mentors_sel = st.multiselect("Mentor", ["All"] + mentors, default=["All"])
+    courses = sorted(df["course"].dropna().unique().tolist())
+    course_sel = st.multiselect("Course", ["All"] + courses, default=["All"])
+    label_sel = st.multiselect("Risk label", ["Red","Amber","Green"], default=["Red","Amber","Green"])
+
+df_view = df.copy()
+if "All" not in mentors_sel:
+    df_view = df_view[df_view["mentor"].isin(mentors_sel)]
+if "All" not in course_sel:
+    df_view = df_view[df_view["course"].isin(course_sel)]
+df_view = df_view[df_view["rule_label"].isin(label_sel)]
+
+# -----------------------
+# Show table with colored label column
+# -----------------------
+display_cols = ["student_id","name","mentor","course","attendance_percent","avg_score","failed_attempts","fees_overdue_days","rule_label"]
+disp = df_view[display_cols].copy()
+
+def label_badge(label):
+    if label == "Red":
+        color = "#ff4b4b"
+    elif label == "Amber":
+        color = "#ffb84d"
+    else:
+        color = "#66c266"
+    return f'<div style="background:{color};padding:6px;border-radius:6px;text-align:center;color:#000;font-weight:600">{label}</div>'
+
+disp["label_html"] = disp["rule_label"].apply(label_badge)
+disp_for_table = disp.drop(columns=["rule_label"])
+
+st.subheader("Students table")
+st.markdown("You can sort the table columns. Risk labels are shown with color coding.")
+
+# Render table with HTML (labels will be styled)
+st.write(
+    disp_for_table.to_html(escape=False, index=False), 
+    unsafe_allow_html=True
+)
+
+# -----------------------
+# Student details
+# -----------------------
+st.subheader("Student details")
+selected = st.text_input("Enter student_id to see flags and notes (e.g. S1000)", value="")
+if selected:
+    sel = df[df["student_id"] == selected]
+    if sel.empty:
+        st.info("Student id not found in current dataset.")
+    else:
+        r = sel.iloc[0]
+        st.write(r[["student_id","name","mentor","course","attendance_percent","avg_score","failed_attempts","fees_overdue_days"]])
+        st.write("Risk label:", r["rule_label"])
+        st.write("Rule flags:")
+        for k,v in r["rule_flags"].items():
+            st.write("-", k, ":", v)
+
+# -----------------------
+# Charts
+# -----------------------
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+st.subheader("Distributions and insights")
+
+col_a, col_b = st.columns(2)
+
+# Attendance distribution with risk overlay
+with col_a:
+    st.caption("Attendance vs Risk")
+    fig, ax = plt.subplots()
+    sns.boxplot(x="rule_label", y="attendance_percent", data=df, ax=ax, palette={"Red":"#ff4b4b","Amber":"#ffb84d","Green":"#66c266"})
+    ax.set_xlabel("Risk Label")
+    ax.set_ylabel("Attendance %")
+    st.pyplot(fig)
+
+# Score distribution with risk overlay
+with col_b:
+    st.caption("Scores vs Risk")
+    fig, ax = plt.subplots()
+    sns.boxplot(x="rule_label", y="avg_score", data=df, ax=ax, palette={"Red":"#ff4b4b","Amber":"#ffb84d","Green":"#66c266"})
+    ax.set_xlabel("Risk Label")
+    ax.set_ylabel("Average Score")
+    st.pyplot(fig)
+
+# Stacked bar chart of counts
+st.caption("Risk distribution across mentors")
+mentor_risk_counts = df.groupby(["mentor","rule_label"]).size().unstack(fill_value=0)
+fig, ax = plt.subplots(figsize=(8,4))
+mentor_risk_counts.plot(kind="bar", stacked=True, color={"Red":"#ff4b4b","Amber":"#ffb84d","Green":"#66c266"}, ax=ax)
+ax.set_ylabel("Number of Students")
+ax.set_title("Mentor-wise Risk Levels")
+st.pyplot(fig)
+
+
+
+# quick pivot
+flag_rows = []
+for _, row in df.iterrows():
+    f = row["rule_flags"]
+    for k,v in f.items():
+        flag_rows.append({"student_id": row["student_id"], "reason": k, "level": v})
+flag_df = pd.DataFrame(flag_rows)
+pivot = flag_df.groupby(["reason","level"]).size().unstack(fill_value=0)
+st.subheader("Flag counts (by reason)")
+st.table(pivot)
+
+# -----------------------
+# Actions
+# -----------------------
+st.subheader("Actions")
+red_df = df[df["rule_label"] == "Red"]
+csv = red_df.to_csv(index=False).encode("utf-8")
+st.download_button("Download Red list as CSV", csv, file_name="red_list.csv", mime="text/csv")
+
+if st.button("Generate fresh sample data (in memory)"):
+    att, sc, fees = generate_sample_data()
+    st.success("Generated new sample data. Reload the app to see updated dataset.")
+
+st.info("Thresholds are editable in the left sidebar. Change them to tune alerts. For real data, upload the three CSVs at the top of the sidebar.")
+
