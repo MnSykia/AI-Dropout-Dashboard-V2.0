@@ -242,7 +242,6 @@ alerts_df = st.session_state.get("alerts_df", pd.DataFrame(columns=["student_id"
 
 use_uploaded = uploaded_att and uploaded_scores and uploaded_fees
 process_now = st.sidebar.button("Process Uploaded Files")
-process_activity_now = st.sidebar.button("Process Daily Activity")
 
 st.sidebar.header("Risk Thresholds")
 attendance_red = st.sidebar.number_input("Attendance red (<)", 0, 100, 65)
