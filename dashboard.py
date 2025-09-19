@@ -196,50 +196,46 @@ uploaded_fees = st.sidebar.file_uploader("Upload fees CSV", type=["csv"])
 uploaded_activity = st.sidebar.file_uploader("Upload daily activity CSV", type=["csv"])
 
 # -----------------------
-# Daily activity entry (manual logging)
+# Daily activity upload (per-day CSVs)
 # -----------------------
-st.sidebar.header("Daily Activity Logger")
+st.sidebar.header("Daily Activity Upload")
 
 # Calendar date picker
-activity_date = st.sidebar.date_input("Select date", datetime.now().date())
+activity_date = st.sidebar.date_input("Select activity date", datetime.now().date())
 
-# Select student
-student_sel = st.sidebar.text_input("Student ID (e.g., S1000)")
+# File uploader for that date's activity CSV
+uploaded_activity = st.sidebar.file_uploader(
+    f"Upload daily activity CSV for {activity_date}",
+    type=["csv"],
+    key=str(activity_date)
+)
 
-# Activity checkboxes
-attended = st.sidebar.checkbox("Attended today?", value=True)
-assignment_submitted = st.sidebar.checkbox("Submitted assignment?", value=True)
-score_today = st.sidebar.number_input("Score (if any)", 0, 100, 0)
+# Store uploaded files by date in session_state
+if "activity_files" not in st.session_state:
+    st.session_state["activity_files"] = {}
 
-# Button to add record
-if st.sidebar.button("Add Daily Activity"):
-    if student_sel:
-        new_row = {
-            "student_id": student_sel,
-            "date": activity_date,
-            "attended": int(attended),
-            "assignment_submitted": int(assignment_submitted),
-            "score": score_today
-        }
+if uploaded_activity:
+    st.session_state["activity_files"][str(activity_date)] = uploaded_activity
+    st.sidebar.success(f"Uploaded activity file for {activity_date}")
+
+# Process selected activity files
+process_activity_now = st.sidebar.button("Process Daily Activity")
+
+alerts_df = pd.DataFrame(columns=["student_id","name","mentor","email","alert_type","details"])
+if process_activity_now:
+    combined_activity = []
+    for date_str, file in st.session_state["activity_files"].items():
         try:
-            existing = pd.read_csv("daily_activity_log.csv")
-        except:
-            existing = pd.DataFrame(columns=["student_id","date","attended","assignment_submitted","score"])
-        updated = pd.concat([existing, pd.DataFrame([new_row])], ignore_index=True)
-        updated.to_csv("daily_activity_log.csv", index=False)
-        st.sidebar.success(f"Logged activity for {student_sel} on {activity_date}")
-    else:
-        st.sidebar.error("Enter a valid student ID")
-
-# Option to process current daily_activity_log
-if st.sidebar.button("Process Logged Daily Activity"):
-    try:
-        activity_df = pd.read_csv("daily_activity_log.csv")
-        alerts_df = process_daily_activity(activity_df, df, alert_thresholds)
+            act_df = pd.read_csv(file)
+            act_df["date"] = pd.to_datetime(act_df["date"], errors="coerce").fillna(pd.to_datetime(date_str))
+            combined_activity.append(act_df)
+        except Exception as e:
+            st.sidebar.error(f"Error reading file for {date_str}: {e}")
+    if combined_activity:
+        all_activity_df = pd.concat(combined_activity, ignore_index=True)
+        alerts_df = process_daily_activity(all_activity_df, df, alert_thresholds)
         st.session_state["alerts_df"] = alerts_df
-        st.sidebar.success(f"{len(alerts_df)} alert(s) detected from logged activity.")
-    except Exception as e:
-        st.sidebar.error("Error: " + str(e))
+        st.sidebar.success(f"{len(alerts_df)} alert(s) detected from uploaded activity.")
 
 # Load alerts from session state if available
 alerts_df = st.session_state.get("alerts_df", pd.DataFrame(columns=["student_id","name","mentor","email","alert_type","details"]))
