@@ -226,16 +226,31 @@ if process_activity_now:
     combined_activity = []
     for date_str, file in st.session_state["activity_files"].items():
         try:
+            if file is None or file.size == 0:
+                st.sidebar.warning(f"Skipped empty file for {date_str}")
+                continue
             act_df = pd.read_csv(file)
-            act_df["date"] = pd.to_datetime(act_df["date"], errors="coerce").fillna(pd.to_datetime(date_str))
+            if act_df.empty:
+                st.sidebar.warning(f"No data in file for {date_str}")
+                continue
+            act_df["date"] = pd.to_datetime(
+                act_df["date"], errors="coerce"
+            ).fillna(pd.to_datetime(date_str))
             combined_activity.append(act_df)
         except Exception as e:
             st.sidebar.error(f"Error reading file for {date_str}: {e}")
+
     if combined_activity:
+        # Ensure df is defined before using it
+        if "df" not in locals():
+            df = load_and_merge(uploaded_att, uploaded_scores, uploaded_fees) \
+                 if (use_uploaded and process_now) else load_and_merge()
+
         all_activity_df = pd.concat(combined_activity, ignore_index=True)
         alerts_df = process_daily_activity(all_activity_df, df, alert_thresholds)
         st.session_state["alerts_df"] = alerts_df
         st.sidebar.success(f"{len(alerts_df)} alert(s) detected from uploaded activity.")
+
 
 # Load alerts from session state if available
 alerts_df = st.session_state.get("alerts_df", pd.DataFrame(columns=["student_id","name","mentor","email","alert_type","details"]))
