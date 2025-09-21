@@ -388,14 +388,6 @@ alerts_df = st.session_state["alerts_df"]
 st.title("🎓 Dropout Risk Dashboard")
 st.markdown("Monitor students and catch risks early to prevent dropouts.")
 
-# Metrics
-total = len(df)
-counts = df["rule_label"].value_counts().reindex(["Red","Amber","Green"]).fillna(0).astype(int)
-c1, c2, c3, c4 = st.columns([1,1,1,2])
-c1.metric("Total Students", total, help="Total number of students in the system")
-c2.metric("🔴 Red", counts["Red"], help="High risk students requiring immediate attention")
-c3.metric("🟡 Amber", counts["Amber"], help="Medium risk students to monitor closely")
-c4.metric("🟢 Green", counts["Green"], help="Low risk students")
 
 # -----------------------
 # Alerts panel
@@ -484,6 +476,15 @@ Student Monitoring System
                     progress_bar.progress((idx + 1) / len(sel_alerts))
                 
                 status_text.text("✅ All emails processed!")
+
+# Metrics
+total = len(df)
+counts = df["rule_label"].value_counts().reindex(["Red","Amber","Green"]).fillna(0).astype(int)
+c1, c2, c3, c4 = st.columns([1,1,1,2])
+c1.metric("Total Students", total, help="Total number of students in the system")
+c2.metric("🔴 Red", counts["Red"], help="High risk students requiring immediate attention")
+c3.metric("🟡 Amber", counts["Amber"], help="Medium risk students to monitor closely")
+c4.metric("🟢 Green", counts["Green"], help="Low risk students")
 
 # -----------------------
 # Filters
