@@ -482,6 +482,8 @@ Student Monitoring System
 # -----------------------
 # Students table
 # -----------------------
+st.markdown("---")
+
 st.subheader("📊 Students Table")
 st.markdown("Click on column headers to sort. Risk labels are color-coded for easy identification.")
 
@@ -497,7 +499,6 @@ c4.metric("🟢 Green", counts["Green"], help="Low risk students")
 # -----------------------
 # Filters
 # -----------------------
-st.markdown("---")
 with st.expander("🔍 Filters"):
     col1, col2, col3 = st.columns(3)
     
