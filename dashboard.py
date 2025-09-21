@@ -223,6 +223,21 @@ if "alerts_df" not in st.session_state:
     st.session_state["alerts_df"] = pd.DataFrame(columns=["student_id","name","mentor","email","alert_type","details"])
 
 # -----------------------
+# Sidebar: file upload + thresholds
+# -----------------------
+st.sidebar.header("📁 Data Input")
+
+# Main data files
+uploaded_att = st.sidebar.file_uploader("Upload attendance CSV", type=["csv"], key="attendance_upload")
+uploaded_scores = st.sidebar.file_uploader("Upload scores CSV", type=["csv"], key="scores_upload")
+uploaded_fees = st.sidebar.file_uploader("Upload fees CSV", type=["csv"], key="fees_upload")
+
+use_uploaded = uploaded_att and uploaded_scores and uploaded_fees
+process_now = st.sidebar.button("Process Uploaded Files", key="process_main_files")
+
+st.sidebar.divider()
+
+# -----------------------
 # Sidebar: Daily activity upload section
 # -----------------------
 st.sidebar.header("📅 Daily Activity Upload")
@@ -286,22 +301,6 @@ if st.sidebar.button("Generate Sample Activity", key="gen_sample_activity"):
 
 # Process all stored activity files
 process_activity_now = st.sidebar.button("🔄 Process All Activity Files", key="process_activity_btn", type="primary")
-
-st.sidebar.divider()
-
-
-# -----------------------
-# Sidebar: file upload + thresholds
-# -----------------------
-st.sidebar.header("📁 Data Input")
-
-# Main data files
-uploaded_att = st.sidebar.file_uploader("Upload attendance CSV", type=["csv"], key="attendance_upload")
-uploaded_scores = st.sidebar.file_uploader("Upload scores CSV", type=["csv"], key="scores_upload")
-uploaded_fees = st.sidebar.file_uploader("Upload fees CSV", type=["csv"], key="fees_upload")
-
-use_uploaded = uploaded_att and uploaded_scores and uploaded_fees
-process_now = st.sidebar.button("Process Uploaded Files", key="process_main_files")
 
 st.sidebar.divider()
 
