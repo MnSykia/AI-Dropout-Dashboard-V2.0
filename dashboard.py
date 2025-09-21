@@ -480,6 +480,21 @@ Student Monitoring System
 
 
 # -----------------------
+# Students table
+# -----------------------
+st.subheader("📊 Students Table")
+st.markdown("Click on column headers to sort. Risk labels are color-coded for easy identification.")
+
+# Metrics
+total = len(df)
+counts = df["rule_label"].value_counts().reindex(["Red","Amber","Green"]).fillna(0).astype(int)
+c1, c2, c3, c4 = st.columns([1,1,1,2])
+c1.metric("Total Students", total, help="Total number of students in the system")
+c2.metric("🔴 Red", counts["Red"], help="High risk students requiring immediate attention")
+c3.metric("🟡 Amber", counts["Amber"], help="Medium risk students to monitor closely")
+c4.metric("🟢 Green", counts["Green"], help="Low risk students")
+
+# -----------------------
 # Filters
 # -----------------------
 st.markdown("---")
@@ -504,21 +519,6 @@ if "All" not in mentors_sel:
 if "All" not in course_sel:
     df_view = df_view[df_view["course"].isin(course_sel)]
 df_view = df_view[df_view["rule_label"].isin(label_sel)]
-
-# Metrics
-total = len(df)
-counts = df["rule_label"].value_counts().reindex(["Red","Amber","Green"]).fillna(0).astype(int)
-c1, c2, c3, c4 = st.columns([1,1,1,2])
-c1.metric("Total Students", total, help="Total number of students in the system")
-c2.metric("🔴 Red", counts["Red"], help="High risk students requiring immediate attention")
-c3.metric("🟡 Amber", counts["Amber"], help="Medium risk students to monitor closely")
-c4.metric("🟢 Green", counts["Green"], help="Low risk students")
-
-# -----------------------
-# Students table
-# -----------------------
-st.subheader("📊 Students Table")
-st.markdown("Click on column headers to sort. Risk labels are color-coded for easy identification.")
 
 # Display with better formatting
 display_cols = ["student_id","name","mentor","course","attendance_percent","avg_score","failed_attempts","fees_overdue_days","rule_label"]
