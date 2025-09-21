@@ -481,6 +481,7 @@ Student Monitoring System
 # -----------------------
 # Filters
 # -----------------------
+st.markdown("---")
 with st.expander("🔍 Filters"):
     col1, col2, col3 = st.columns(3)
     
