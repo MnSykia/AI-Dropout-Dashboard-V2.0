@@ -223,21 +223,6 @@ if "alerts_df" not in st.session_state:
     st.session_state["alerts_df"] = pd.DataFrame(columns=["student_id","name","mentor","email","alert_type","details"])
 
 # -----------------------
-# Sidebar: file upload + thresholds
-# -----------------------
-st.sidebar.header("📁 Data Input")
-
-# Main data files
-uploaded_att = st.sidebar.file_uploader("Upload attendance CSV", type=["csv"], key="attendance_upload")
-uploaded_scores = st.sidebar.file_uploader("Upload scores CSV", type=["csv"], key="scores_upload")
-uploaded_fees = st.sidebar.file_uploader("Upload fees CSV", type=["csv"], key="fees_upload")
-
-use_uploaded = uploaded_att and uploaded_scores and uploaded_fees
-process_now = st.sidebar.button("Process Uploaded Files", key="process_main_files")
-
-st.sidebar.divider()
-
-# -----------------------
 # Sidebar: Daily activity upload section
 # -----------------------
 st.sidebar.header("📅 Daily Activity Upload")
@@ -304,6 +289,29 @@ process_activity_now = st.sidebar.button("🔄 Process All Activity Files", key=
 
 st.sidebar.divider()
 
+st.sidebar.header("🚨 Alert Rule Configuration")
+alert_thresholds = {
+    "attendance_days": st.sidebar.number_input("Consecutive absences (>=)", 1, 30, 3, key="alert_att"),
+    "score_days": st.sidebar.number_input("Consecutive low scores (>=)", 1, 30, 3, key="alert_score"),
+    "assignment_days": st.sidebar.number_input("Consecutive assignment misses (>=)", 1, 30, 3, key="alert_assign"),
+    "score_cutoff": st.sidebar.number_input("Low score threshold (<)", 0, 100, 40, key="score_cutoff")
+}
+
+# -----------------------
+# Sidebar: file upload + thresholds
+# -----------------------
+st.sidebar.header("📁 Data Input")
+
+# Main data files
+uploaded_att = st.sidebar.file_uploader("Upload attendance CSV", type=["csv"], key="attendance_upload")
+uploaded_scores = st.sidebar.file_uploader("Upload scores CSV", type=["csv"], key="scores_upload")
+uploaded_fees = st.sidebar.file_uploader("Upload fees CSV", type=["csv"], key="fees_upload")
+
+use_uploaded = uploaded_att and uploaded_scores and uploaded_fees
+process_now = st.sidebar.button("Process Uploaded Files", key="process_main_files")
+
+st.sidebar.divider()
+
 # -----------------------
 # Thresholds
 # -----------------------
@@ -328,13 +336,6 @@ thresholds = {
     "fees_overdue_days_amber": fees_amber
 }
 
-st.sidebar.header("🚨 Alert Rule Configuration")
-alert_thresholds = {
-    "attendance_days": st.sidebar.number_input("Consecutive absences (>=)", 1, 30, 3, key="alert_att"),
-    "score_days": st.sidebar.number_input("Consecutive low scores (>=)", 1, 30, 3, key="alert_score"),
-    "assignment_days": st.sidebar.number_input("Consecutive assignment misses (>=)", 1, 30, 3, key="alert_assign"),
-    "score_cutoff": st.sidebar.number_input("Low score threshold (<)", 0, 100, 40, key="score_cutoff")
-}
 
 # -----------------------
 # Load and process main data
