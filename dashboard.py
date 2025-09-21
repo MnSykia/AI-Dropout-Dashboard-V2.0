@@ -298,6 +298,44 @@ alert_thresholds = {
 
 st.sidebar.divider()
 
+
+# -----------------------
+# Process daily activity files when button is clicked
+# -----------------------
+if process_activity_now:
+    if st.session_state["activity_data_storage"]:
+        combined_activity = []
+        
+        for date_str, file_info in st.session_state["activity_data_storage"].items():
+            try:
+                # Read the stored CSV data
+                act_df = pd.read_csv(io.StringIO(file_info["data"]))
+                
+                # Ensure date column exists and is properly set
+                if "date" not in act_df.columns:
+                    act_df["date"] = date_str
+                else:
+                    act_df["date"] = pd.to_datetime(act_df["date"], errors="coerce").fillna(pd.to_datetime(date_str))
+                
+                combined_activity.append(act_df)
+            except Exception as e:
+                st.sidebar.error(f"Error processing {date_str}: {e}")
+        
+        if combined_activity:
+            # Combine all activity data
+            all_activity_df = pd.concat(combined_activity, ignore_index=True)
+            
+            # Process for alerts
+            alerts_df = process_daily_activity(all_activity_df, df, alert_thresholds)
+            st.session_state["alerts_df"] = alerts_df
+            
+            if not alerts_df.empty:
+                st.sidebar.success(f"🎯 {len(alerts_df)} alert(s) detected from activity data")
+            else:
+                st.sidebar.info("ℹ️ No alerts detected from activity data")
+    else:
+        st.sidebar.warning("⚠️ No activity files stored. Please add activity files first.")
+
 # -----------------------
 # Sidebar: Data Input (MOVED DOWN)
 # -----------------------
@@ -343,42 +381,6 @@ thresholds = {
 df = load_and_merge(uploaded_att, uploaded_scores, uploaded_fees) if (use_uploaded and process_now) else load_and_merge()
 df = evaluate_risk(df, thresholds)
 
-# -----------------------
-# Process daily activity files when button is clicked
-# -----------------------
-if process_activity_now:
-    if st.session_state["activity_data_storage"]:
-        combined_activity = []
-        
-        for date_str, file_info in st.session_state["activity_data_storage"].items():
-            try:
-                # Read the stored CSV data
-                act_df = pd.read_csv(io.StringIO(file_info["data"]))
-                
-                # Ensure date column exists and is properly set
-                if "date" not in act_df.columns:
-                    act_df["date"] = date_str
-                else:
-                    act_df["date"] = pd.to_datetime(act_df["date"], errors="coerce").fillna(pd.to_datetime(date_str))
-                
-                combined_activity.append(act_df)
-            except Exception as e:
-                st.sidebar.error(f"Error processing {date_str}: {e}")
-        
-        if combined_activity:
-            # Combine all activity data
-            all_activity_df = pd.concat(combined_activity, ignore_index=True)
-            
-            # Process for alerts
-            alerts_df = process_daily_activity(all_activity_df, df, alert_thresholds)
-            st.session_state["alerts_df"] = alerts_df
-            
-            if not alerts_df.empty:
-                st.sidebar.success(f"🎯 {len(alerts_df)} alert(s) detected from activity data")
-            else:
-                st.sidebar.info("ℹ️ No alerts detected from activity data")
-    else:
-        st.sidebar.warning("⚠️ No activity files stored. Please add activity files first.")
 
 # Load alerts from session state
 alerts_df = st.session_state["alerts_df"]
