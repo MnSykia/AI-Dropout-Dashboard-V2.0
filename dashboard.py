@@ -223,6 +223,47 @@ if "alerts_df" not in st.session_state:
     st.session_state["alerts_df"] = pd.DataFrame(columns=["student_id","name","mentor","email","alert_type","details"])
 
 # -----------------------
+# Sidebar: file upload + thresholds (MOVED UP)
+# -----------------------
+st.sidebar.header("📁 Data Input")
+
+# Main data files
+uploaded_att = st.sidebar.file_uploader("Upload attendance CSV", type=["csv"], key="attendance_upload")
+uploaded_scores = st.sidebar.file_uploader("Upload scores CSV", type=["csv"], key="scores_upload")
+uploaded_fees = st.sidebar.file_uploader("Upload fees CSV", type=["csv"], key="fees_upload")
+
+use_uploaded = uploaded_att and uploaded_scores and uploaded_fees
+process_now = st.sidebar.button("Process Uploaded Files", key="process_main_files")
+
+st.sidebar.divider()
+
+# -----------------------
+# Thresholds (MOVED UP)
+# -----------------------
+st.sidebar.header("⚙️ Risk Thresholds")
+attendance_red = st.sidebar.number_input("Attendance red (<)", 0, 100, 65, key="att_red")
+attendance_amber = st.sidebar.number_input("Attendance amber (<)", 0, 100, 75, key="att_amber")
+score_red = st.sidebar.number_input("Score red (<)", 0, 100, 35, key="score_red")
+score_amber = st.sidebar.number_input("Score amber (<)", 0, 100, 50, key="score_amber")
+failed_red = st.sidebar.number_input("Failed attempts red (>=)", 0, 10, 2, key="failed_red")
+failed_amber = st.sidebar.number_input("Failed attempts amber (>=)", 0, 10, 1, key="failed_amber")
+fees_red = st.sidebar.number_input("Fees overdue red (>= days)", 0, 365, 30, key="fees_red")
+fees_amber = st.sidebar.number_input("Fees overdue amber (>= days)", 0, 365, 7, key="fees_amber")
+
+thresholds = {
+    "attendance_red": attendance_red,
+    "attendance_amber": attendance_amber,
+    "score_red": score_red,
+    "score_amber": score_amber,
+    "failed_attempts_red": failed_red,
+    "failed_attempts_amber": failed_amber,
+    "fees_overdue_days_red": fees_red,
+    "fees_overdue_days_amber": fees_amber
+}
+
+st.sidebar.divider()
+
+# -----------------------
 # Sidebar: Daily activity upload section
 # -----------------------
 st.sidebar.header("📅 Daily Activity Upload")
@@ -270,9 +311,9 @@ if st.session_state["activity_data_storage"]:
     for date_str, file_info in sorted(st.session_state["activity_data_storage"].items()):
         st.sidebar.text(f"• {date_str}: {file_info['rows']} rows")
 
-# Generate sample daily activity button
+# Generate sample daily activity button - NOW FIXED
 if st.sidebar.button("Generate Sample Activity", key="gen_sample_activity"):
-    # Load main data to get student IDs
+    # Load main data to get student IDs - variables are now defined above
     df_main = load_and_merge(uploaded_att, uploaded_scores, uploaded_fees) if (use_uploaded and process_now) else load_and_merge()
     sample_activity = generate_sample_daily_activity(df_main["student_id"].tolist(), activity_date)
     
@@ -296,46 +337,6 @@ alert_thresholds = {
     "assignment_days": st.sidebar.number_input("Consecutive assignment misses (>=)", 1, 30, 3, key="alert_assign"),
     "score_cutoff": st.sidebar.number_input("Low score threshold (<)", 0, 100, 40, key="score_cutoff")
 }
-
-# -----------------------
-# Sidebar: file upload + thresholds
-# -----------------------
-st.sidebar.header("📁 Data Input")
-
-# Main data files
-uploaded_att = st.sidebar.file_uploader("Upload attendance CSV", type=["csv"], key="attendance_upload")
-uploaded_scores = st.sidebar.file_uploader("Upload scores CSV", type=["csv"], key="scores_upload")
-uploaded_fees = st.sidebar.file_uploader("Upload fees CSV", type=["csv"], key="fees_upload")
-
-use_uploaded = uploaded_att and uploaded_scores and uploaded_fees
-process_now = st.sidebar.button("Process Uploaded Files", key="process_main_files")
-
-st.sidebar.divider()
-
-# -----------------------
-# Thresholds
-# -----------------------
-st.sidebar.header("⚙️ Risk Thresholds")
-attendance_red = st.sidebar.number_input("Attendance red (<)", 0, 100, 65, key="att_red")
-attendance_amber = st.sidebar.number_input("Attendance amber (<)", 0, 100, 75, key="att_amber")
-score_red = st.sidebar.number_input("Score red (<)", 0, 100, 35, key="score_red")
-score_amber = st.sidebar.number_input("Score amber (<)", 0, 100, 50, key="score_amber")
-failed_red = st.sidebar.number_input("Failed attempts red (>=)", 0, 10, 2, key="failed_red")
-failed_amber = st.sidebar.number_input("Failed attempts amber (>=)", 0, 10, 1, key="failed_amber")
-fees_red = st.sidebar.number_input("Fees overdue red (>= days)", 0, 365, 30, key="fees_red")
-fees_amber = st.sidebar.number_input("Fees overdue amber (>= days)", 0, 365, 7, key="fees_amber")
-
-thresholds = {
-    "attendance_red": attendance_red,
-    "attendance_amber": attendance_amber,
-    "score_red": score_red,
-    "score_amber": score_amber,
-    "failed_attempts_red": failed_red,
-    "failed_attempts_amber": failed_amber,
-    "fees_overdue_days_red": fees_red,
-    "fees_overdue_days_amber": fees_amber
-}
-
 
 # -----------------------
 # Load and process main data
