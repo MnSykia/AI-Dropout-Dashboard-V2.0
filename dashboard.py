@@ -270,13 +270,6 @@ if st.session_state["activity_data_storage"]:
     for date_str, file_info in sorted(st.session_state["activity_data_storage"].items()):
         st.sidebar.text(f"• {date_str}: {file_info['rows']} rows")
 
-# Generate sample daily activity button - Create temporary variables for this section
-temp_uploaded_att = st.sidebar.file_uploader("temp_att", type=["csv"], key="temp_att", label_visibility="hidden")
-temp_uploaded_scores = st.sidebar.file_uploader("temp_scores", type=["csv"], key="temp_scores", label_visibility="hidden") 
-temp_uploaded_fees = st.sidebar.file_uploader("temp_fees", type=["csv"], key="temp_fees", label_visibility="hidden")
-temp_use_uploaded = temp_uploaded_att and temp_uploaded_scores and temp_uploaded_fees
-temp_process_now = False  # Since we're not processing uploaded files here
-
 if st.sidebar.button("Generate Sample Activity", key="gen_sample_activity"):
     # Load main data to get student IDs - use temporary variables or fallback to sample
     df_main = load_and_merge()  # Always use sample data for generation
