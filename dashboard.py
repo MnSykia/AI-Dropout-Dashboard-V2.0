@@ -77,9 +77,14 @@ def generate_sample_daily_attendance(student_ids, n_days=30, seed=42):
     for date in dates:
         # Generate attendance with some patterns (weekends slightly lower attendance)
         date_obj = datetime.strptime(date, '%Y-%m-%d')
-        weekend_factor = 0.85 if date_obj.weekday() >= 5 else 1.0
+        if date_obj.weekday() >= 5:  # Weekend
+            prob_present = 0.75
+        else:  # Weekday
+            prob_present = 0.85
+        
+        prob_absent = 1.0 - prob_present
         attendance_data[date] = np.random.choice(['P', 'A'], len(student_ids), 
-                                                p=[0.85 * weekend_factor, 0.15 * (2-weekend_factor)])
+                                                p=[prob_present, prob_absent])
     
     return pd.DataFrame(attendance_data)
 
