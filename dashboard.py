@@ -320,6 +320,28 @@ if st.sidebar.button("Generate Sample Activity", key="gen_sample_activity"):
 # Process all stored activity files
 process_activity_now = st.sidebar.button("🔄 Process All Activity Files", key="process_activity_btn", type="primary")
 
+# Process all stored activity files
+process_activity_now = st.sidebar.button("🔄 Process All Activity Files", key="process_activity_btn", type="primary")
+alert_thresholds = {
+    "attendance_days": st.sidebar.number_input("Consecutive absences (>=)", 1, 30, 3, key="alert_att"),
+    "score_days": st.sidebar.number_input("Consecutive low scores (>=)", 1, 30, 3, key="alert_score"),
+    "assignment_days": st.sidebar.number_input("Consecutive assignment misses (>=)", 1, 30, 3, key="alert_assign"),
+    "score_cutoff": st.sidebar.number_input("Low score threshold (<)", 0, 100, 40, key="score_cutoff")
+}
+
+# -----------------------
+# Sidebar: Data Input
+# -----------------------
+st.sidebar.header("📁 Data Input")
+
+# Main data files
+uploaded_att = st.sidebar.file_uploader("Upload attendance CSV", type=["csv"], key="attendance_upload")
+uploaded_scores = st.sidebar.file_uploader("Upload scores CSV", type=["csv"], key="scores_upload")
+uploaded_fees = st.sidebar.file_uploader("Upload fees CSV", type=["csv"], key="fees_upload")
+
+use_uploaded = uploaded_att and uploaded_scores and uploaded_fees
+process_now = st.sidebar.button("Process Uploaded Files", key="process_main_files")
+
 st.sidebar.divider()
 
 # -----------------------
@@ -354,31 +376,6 @@ with col2:
         sample_heatmap = generate_sample_daily_attendance(df_main["student_id"].tolist())
         st.session_state["attendance_heatmap_data"] = sample_heatmap
         st.sidebar.success("✅ Generated sample heatmap data")
-
-st.sidebar.divider()
-
-st.sidebar.header("🚨 Alert Rule Configuration")
-alert_thresholds = {
-    "attendance_days": st.sidebar.number_input("Consecutive absences (>=)", 1, 30, 3, key="alert_att"),
-    "score_days": st.sidebar.number_input("Consecutive low scores (>=)", 1, 30, 3, key="alert_score"),
-    "assignment_days": st.sidebar.number_input("Consecutive assignment misses (>=)", 1, 30, 3, key="alert_assign"),
-    "score_cutoff": st.sidebar.number_input("Low score threshold (<)", 0, 100, 40, key="score_cutoff")
-}
-
-st.sidebar.divider()
-
-# -----------------------
-# Sidebar: Data Input
-# -----------------------
-st.sidebar.header("📁 Data Input")
-
-# Main data files
-uploaded_att = st.sidebar.file_uploader("Upload attendance CSV", type=["csv"], key="attendance_upload")
-uploaded_scores = st.sidebar.file_uploader("Upload scores CSV", type=["csv"], key="scores_upload")
-uploaded_fees = st.sidebar.file_uploader("Upload fees CSV", type=["csv"], key="fees_upload")
-
-use_uploaded = uploaded_att and uploaded_scores and uploaded_fees
-process_now = st.sidebar.button("Process Uploaded Files", key="process_main_files")
 
 st.sidebar.divider()
 
