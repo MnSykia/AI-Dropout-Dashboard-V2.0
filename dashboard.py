@@ -637,6 +637,174 @@ with col_b:
     ax.set_title("Score Distribution by Risk Level")
     st.pyplot(fig)
 
+# -----------------------
+# Attendance Heatmap Section
+# -----------------------
+st.markdown("---")
+st.subheader("🔥 Interactive Attendance Heatmap")
+
+if st.session_state["attendance_heatmap_data"] is not None:
+    heatmap_df = st.session_state["attendance_heatmap_data"]
+    
+    # Extract date columns (assuming first 2 columns are ID and Name)
+    if len(heatmap_df.columns) > 2:
+        attendance_cols = heatmap_df.columns[2:]
+        
+        # Parameters for windowing
+        window_students = 10
+        window_dates = 7
+        
+        # Get min/max ID values for navigation
+        if "ID" in heatmap_df.columns:
+            id_col = "ID"
+            min_id_idx = 0
+            max_id_idx = len(heatmap_df) - 1
+        else:
+            id_col = heatmap_df.columns[0]  # First column as ID
+            min_id_idx = 0
+            max_id_idx = len(heatmap_df) - 1
+        
+        total_dates = len(attendance_cols)
+        
+        # Navigation functions
+        def move_students_up():
+            st.session_state.heatmap_student_offset = max(0, st.session_state.heatmap_student_offset - 1)
+        
+        def move_students_down():
+            st.session_state.heatmap_student_offset = min(max_id_idx - window_students + 1, st.session_state.heatmap_student_offset + 1)
+        
+        def move_dates_left():
+            st.session_state.heatmap_date_offset = max(0, st.session_state.heatmap_date_offset - 1)
+        
+        def move_dates_right():
+            st.session_state.heatmap_date_offset = min(total_dates - window_dates, st.session_state.heatmap_date_offset + 1)
+        
+        # Navigation buttons
+        col1, col2, col3 = st.columns([2, 1, 2])
+        
+        with col1:
+            st.markdown("**Student Navigation:**")
+            subcol1, subcol2 = st.columns(2)
+            with subcol1:
+                if st.button("⬆️ Previous Students", key="heatmap_students_up"):
+                    move_students_up()
+            with subcol2:
+                if st.button("⬇️ Next Students", key="heatmap_students_down"):
+                    move_students_down()
+        
+        with col3:
+            st.markdown("**Date Navigation:**")
+            subcol1, subcol2 = st.columns(2)
+            with subcol1:
+                if st.button("⬅️ Previous Dates", key="heatmap_dates_left"):
+                    move_dates_left()
+            with subcol2:
+                if st.button("➡️ Next Dates", key="heatmap_dates_right"):
+                    move_dates_right()
+        
+        # Calculate current window
+        start_student_idx = st.session_state.heatmap_student_offset
+        end_student_idx = min(start_student_idx + window_students - 1, max_id_idx)
+        
+        start_date_idx = st.session_state.heatmap_date_offset
+        end_date_idx = min(start_date_idx + window_dates - 1, total_dates - 1)
+        
+        # Get subset of data
+        selected_dates = attendance_cols[start_date_idx:end_date_idx + 1]
+        df_subset = heatmap_df.iloc[start_student_idx:end_student_idx + 1]
+        
+        # Convert attendance to numeric: P=1, A=0
+        attendance_matrix = df_subset[selected_dates].replace({"P": 1, "A": 0}).fillna(1)
+        
+        # Apply last 3-day absence shading
+        shade_matrix = attendance_matrix.copy()
+        for idx in range(len(attendance_matrix)):
+            row = attendance_matrix.iloc[idx]
+            for col_idx, col in enumerate(attendance_matrix.columns):
+                # last 3 days including current
+                last3_idx = max(0, col_idx - 2)
+                last3_values = row.iloc[last3_idx:col_idx+1]
+                absences = (last3_values == 0).sum()
+                
+                if row.iloc[col_idx] == 1:
+                    shade_matrix.iloc[idx, col_idx] = 0  # Present = green
+                else:
+                    if absences == 1:
+                        shade_matrix.iloc[idx, col_idx] = 1  # light red
+                    elif absences == 2:
+                        shade_matrix.iloc[idx, col_idx] = 2  # medium red
+                    else:
+                        shade_matrix.iloc[idx, col_idx] = 3  # dark red
+        
+        # Use names if available
+        if "Name" in df_subset.columns:
+            shade_matrix.index = df_subset["Name"]
+        else:
+            shade_matrix.index = df_subset[id_col]
+        
+        # Colormap: Green + 3 reds
+        cmap = mcolors.ListedColormap(["green", "#ff9999", "#ff4d4d", "#cc0000"])
+        bounds = [-0.5, 0.5, 1.5, 2.5, 3.5]
+        norm = mcolors.BoundaryNorm(bounds, cmap.N)
+        
+        # Current window info
+        start_student_name = df_subset.iloc[0]["Name"] if "Name" in df_subset.columns else df_subset.iloc[0][id_col]
+        end_student_name = df_subset.iloc[-1]["Name"] if "Name" in df_subset.columns else df_subset.iloc[-1][id_col]
+        
+        st.info(f"📊 Showing students {start_student_name} to {end_student_name}, dates {selected_dates[0]} to {selected_dates[-1]}")
+        
+        # Plot heatmap
+        fig, ax = plt.subplots(figsize=(12, 6))
+        sns.heatmap(
+            shade_matrix[selected_dates],
+            cmap=cmap,
+            norm=norm,
+            cbar=True,
+            ax=ax,
+            linewidths=0.3,
+            linecolor="black",
+            square=True,
+            annot=False,
+            cbar_kws={'label': 'Attendance Status'}
+        )
+        ax.set_ylabel("Students", fontsize=10)
+        ax.set_xlabel("Date", fontsize=10)
+        ax.set_title("Daily Attendance Heatmap\n(Green=Present, Red shades=Absences in last 3 days)", fontsize=12)
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha="right", fontsize=9)
+        ax.set_yticklabels(ax.get_yticklabels(), fontsize=9)
+        
+        # Add custom legend
+        from matplotlib.patches import Patch
+        legend_elements = [
+            Patch(facecolor='green', label='Present'),
+            Patch(facecolor='#ff9999', label='1 absence (last 3 days)'),
+            Patch(facecolor='#ff4d4d', label='2 absences (last 3 days)'),
+            Patch(facecolor='#cc0000', label='3+ absences (last 3 days)')
+        ]
+        ax.legend(handles=legend_elements, bbox_to_anchor=(1.05, 1), loc='upper left')
+        
+        plt.tight_layout()
+        st.pyplot(fig)
+        
+        # Heatmap statistics
+        total_students_shown = len(df_subset)
+        total_days_shown = len(selected_dates)
+        total_present = (attendance_matrix == 1).sum().sum()
+        total_absent = (attendance_matrix == 0).sum().sum()
+        attendance_rate = (total_present / (total_present + total_absent)) * 100 if (total_present + total_absent) > 0 else 0
+        
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Students Shown", total_students_shown)
+        col2.metric("Days Shown", total_days_shown)
+        col3.metric("Overall Attendance", f"{attendance_rate:.1f}%")
+        col4.metric("Total Records", total_students_shown * total_days_shown)
+        
+    else:
+        st.warning("⚠️ Loaded heatmap data doesn't have enough columns. Expected: ID, Name, followed by date columns.")
+else:
+    st.info("ℹ️ No attendance heatmap data loaded. Please upload a daily attendance CSV or generate sample data from the sidebar.")
+
+
 # Mentor risk distribution
 st.caption("Risk Distribution Across Mentors")
 mentor_risk_counts = df.groupby(["mentor","rule_label"]).size().unstack(fill_value=0)
