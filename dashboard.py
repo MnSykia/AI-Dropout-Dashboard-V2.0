@@ -669,14 +669,6 @@ if flag_rows:
     st.subheader("📋 Flag Summary")
     st.dataframe(pivot, use_container_width=True)
 
-st.subheader("Heatmap: Daily Attendance")
-attendance_matrix = df[attendance_cols].replace({"P": 1, "A": 0})
-fig, ax = plt.subplots(figsize=(12, 8))
-sns.heatmap(attendance_matrix, cmap="YlGnBu", cbar=True, ax=ax)
-ax.set_ylabel("Student Index")
-ax.set_xlabel("Date")
-ax.set_title("Student Daily Attendance Heatmap")
-st.pyplot(fig)
 
 # -----------------------
 # Actions
