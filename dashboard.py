@@ -698,7 +698,15 @@ with col_b:
 st.markdown("---")
 st.subheader("🔥 Interactive Attendance Heatmap")
 
-if st.session_state["attendance_heatmap_data"] is not None:
+# Ensure session state variables are initialized
+if "attendance_heatmap_data" not in st.session_state:
+    st.session_state["attendance_heatmap_data"] = None
+if "heatmap_student_offset" not in st.session_state:
+    st.session_state["heatmap_student_offset"] = 0
+if "heatmap_date_offset" not in st.session_state:
+    st.session_state["heatmap_date_offset"] = 0
+
+if st.session_state.get("attendance_heatmap_data") is not None:
     heatmap_df = st.session_state["attendance_heatmap_data"]
     
     # Extract date columns (assuming first 2 columns are ID and Name)
@@ -723,16 +731,24 @@ if st.session_state["attendance_heatmap_data"] is not None:
         
         # Navigation functions
         def move_students_up():
-            st.session_state.heatmap_student_offset = max(0, st.session_state.heatmap_student_offset - 1)
+            if "heatmap_student_offset" not in st.session_state:
+                st.session_state["heatmap_student_offset"] = 0
+            st.session_state["heatmap_student_offset"] = max(0, st.session_state["heatmap_student_offset"] - 1)
         
         def move_students_down():
-            st.session_state.heatmap_student_offset = min(max_id_idx - window_students + 1, st.session_state.heatmap_student_offset + 1)
+            if "heatmap_student_offset" not in st.session_state:
+                st.session_state["heatmap_student_offset"] = 0
+            st.session_state["heatmap_student_offset"] = min(max_id_idx - window_students + 1, st.session_state["heatmap_student_offset"] + 1)
         
         def move_dates_left():
-            st.session_state.heatmap_date_offset = max(0, st.session_state.heatmap_date_offset - 1)
+            if "heatmap_date_offset" not in st.session_state:
+                st.session_state["heatmap_date_offset"] = 0
+            st.session_state["heatmap_date_offset"] = max(0, st.session_state["heatmap_date_offset"] - 1)
         
         def move_dates_right():
-            st.session_state.heatmap_date_offset = min(total_dates - window_dates, st.session_state.heatmap_date_offset + 1)
+            if "heatmap_date_offset" not in st.session_state:
+                st.session_state["heatmap_date_offset"] = 0
+            st.session_state["heatmap_date_offset"] = min(total_dates - window_dates, st.session_state["heatmap_date_offset"] + 1)
         
         # Navigation buttons
         col1, col2, col3 = st.columns([2, 1, 2])
@@ -758,10 +774,10 @@ if st.session_state["attendance_heatmap_data"] is not None:
                     move_dates_right()
         
         # Calculate current window
-        start_student_idx = st.session_state.heatmap_student_offset
+        start_student_idx = st.session_state.get("heatmap_student_offset", 0)
         end_student_idx = min(start_student_idx + window_students - 1, max_id_idx)
         
-        start_date_idx = st.session_state.heatmap_date_offset
+        start_date_idx = st.session_state.get("heatmap_date_offset", 0)
         end_date_idx = min(start_date_idx + window_dates - 1, total_dates - 1)
         
         # Get subset of data
