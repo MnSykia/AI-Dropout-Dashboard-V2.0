@@ -1,5 +1,5 @@
 # dashboard.py
-# Streamlit dashboard for Drop-out Prediction and Counseling
+# Streamlit dashboard for Drop-out Prediction and Counseling with Attendance Heatmap
 # Run: streamlit run dashboard.py
 
 import streamlit as st
@@ -7,6 +7,9 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 import io
+import matplotlib.pyplot as plt
+import seaborn as sns
+import matplotlib.colors as mcolors
 
 st.set_page_config(page_title="Dropout Risk Dashboard", layout="wide")
 
@@ -53,6 +56,32 @@ def generate_sample_data(n=150, seed=42):
     })
 
     return attendance_df, scores_df, fees_df
+
+# -----------------------
+# Generate sample daily attendance data (for heatmap)
+# -----------------------
+def generate_sample_daily_attendance(student_ids, n_days=30, seed=42):
+    """Generate daily attendance data for heatmap visualization"""
+    if seed:
+        np.random.seed(seed)
+    
+    base_date = datetime.now().date()
+    dates = [(base_date - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(n_days-1, -1, -1)]
+    
+    # Create attendance matrix
+    attendance_data = {
+        "ID": student_ids,
+        "Name": [f"Student_{sid.replace('S', '')}" for sid in student_ids]
+    }
+    
+    for date in dates:
+        # Generate attendance with some patterns (weekends slightly lower attendance)
+        date_obj = datetime.strptime(date, '%Y-%m-%d')
+        weekend_factor = 0.85 if date_obj.weekday() >= 5 else 1.0
+        attendance_data[date] = np.random.choice(['P', 'A'], len(student_ids), 
+                                                p=[0.85 * weekend_factor, 0.15 * (2-weekend_factor)])
+    
+    return pd.DataFrame(attendance_data)
 
 # -----------------------
 # Generate sample daily activity data
@@ -223,7 +252,7 @@ if "alerts_df" not in st.session_state:
     st.session_state["alerts_df"] = pd.DataFrame(columns=["student_id","name","mentor","email","alert_type","details"])
 
 # -----------------------
-# Sidebar: Daily activity upload section (MOVED TO TOP)
+# Sidebar: Daily activity upload section
 # -----------------------
 st.sidebar.header("📅 Daily Activity Upload")
 
@@ -288,6 +317,41 @@ process_activity_now = st.sidebar.button("🔄 Process All Activity Files", key=
 
 st.sidebar.divider()
 
+# -----------------------
+# Sidebar: Attendance Heatmap Data Upload
+# -----------------------
+st.sidebar.header("📊 Attendance Heatmap Data")
+
+# File uploader for daily attendance CSV
+attendance_heatmap_file = st.sidebar.file_uploader(
+    "Upload daily attendance CSV for heatmap",
+    type=["csv"],
+    key="attendance_heatmap_upload",
+    help="CSV should have ID, Name columns followed by date columns with P/A values"
+)
+
+col1, col2 = st.sidebar.columns(2)
+with col1:
+    if st.button("Load Heatmap Data", key="load_heatmap_btn"):
+        if attendance_heatmap_file is not None:
+            try:
+                heatmap_df = pd.read_csv(attendance_heatmap_file)
+                st.session_state["attendance_heatmap_data"] = heatmap_df
+                st.sidebar.success(f"✅ Loaded heatmap data ({len(heatmap_df)} students)")
+            except Exception as e:
+                st.sidebar.error(f"❌ Error reading heatmap file: {e}")
+        else:
+            st.sidebar.warning("⚠️ Please upload a file first")
+
+with col2:
+    if st.button("Generate Sample Heatmap", key="gen_sample_heatmap"):
+        df_main = load_and_merge()
+        sample_heatmap = generate_sample_daily_attendance(df_main["student_id"].tolist())
+        st.session_state["attendance_heatmap_data"] = sample_heatmap
+        st.sidebar.success("✅ Generated sample heatmap data")
+
+st.sidebar.divider()
+
 st.sidebar.header("🚨 Alert Rule Configuration")
 alert_thresholds = {
     "attendance_days": st.sidebar.number_input("Consecutive absences (>=)", 1, 30, 3, key="alert_att"),
@@ -298,9 +362,8 @@ alert_thresholds = {
 
 st.sidebar.divider()
 
-
 # -----------------------
-# Sidebar: Data Input (MOVED DOWN)
+# Sidebar: Data Input
 # -----------------------
 st.sidebar.header("📁 Data Input")
 
@@ -315,7 +378,7 @@ process_now = st.sidebar.button("Process Uploaded Files", key="process_main_file
 st.sidebar.divider()
 
 # -----------------------
-# Risk Thresholds (MOVED DOWN)
+# Risk Thresholds
 # -----------------------
 st.sidebar.header("⚙️ Risk Thresholds")
 attendance_red = st.sidebar.number_input("Attendance red (<)", 0, 100, 65, key="att_red")
@@ -343,8 +406,6 @@ thresholds = {
 # -----------------------
 df = load_and_merge(uploaded_att, uploaded_scores, uploaded_fees) if (use_uploaded and process_now) else load_and_merge()
 df = evaluate_risk(df, thresholds)
-
-
 
 # -----------------------
 # Process daily activity files when button is clicked
@@ -383,7 +444,6 @@ if process_activity_now:
     else:
         st.sidebar.warning("⚠️ No activity files stored. Please add activity files first.")
 
-
 # Load alerts from session state
 alerts_df = st.session_state["alerts_df"]
 
@@ -392,7 +452,6 @@ alerts_df = st.session_state["alerts_df"]
 # -----------------------
 st.title("🎓 Dropout Risk Dashboard")
 st.markdown("Monitor students and catch risks early to prevent dropouts.")
-
 
 # -----------------------
 # Alerts panel
@@ -481,7 +540,6 @@ Student Monitoring System
                     progress_bar.progress((idx + 1) / len(sel_alerts))
                 
                 status_text.text("✅ All emails processed!")
-
 
 # -----------------------
 # Students table
@@ -595,14 +653,11 @@ if selected:
         st.dataframe(flags_df, hide_index=True, use_container_width=False)
 
 # -----------------------
-# Charts
+# Charts and Heatmap
 # -----------------------
-import matplotlib.pyplot as plt
-import seaborn as sns
-import matplotlib.colors as mcolors
-
 st.subheader("📈 Distributions and Insights")
 
+# First row: Attendance vs Risk and Scores vs Risk
 col_a, col_b = st.columns(2)
 
 with col_a:
@@ -804,7 +859,9 @@ if st.session_state["attendance_heatmap_data"] is not None:
 else:
     st.info("ℹ️ No attendance heatmap data loaded. Please upload a daily attendance CSV or generate sample data from the sidebar.")
 
-
+# -----------------------
+# Continue with existing charts
+# -----------------------
 # Mentor risk distribution
 st.caption("Risk Distribution Across Mentors")
 mentor_risk_counts = df.groupby(["mentor","rule_label"]).size().unstack(fill_value=0)
@@ -836,7 +893,6 @@ if flag_rows:
     
     st.subheader("📋 Flag Summary")
     st.dataframe(pivot, use_container_width=True)
-
 
 # -----------------------
 # Actions
@@ -912,8 +968,8 @@ st.markdown(
     <div style='text-align: center; color: gray; padding: 20px;'>
     <p>💡 <b>Tips:</b> Adjust thresholds in the sidebar to fine-tune risk detection | 
     Upload daily activity CSVs for multiple dates to track patterns | 
-    Use filters to focus on specific groups</p>
-    <p>🎓 Dropout Risk Detection System v2.0</p>
+    Use filters to focus on specific groups | Load attendance heatmap data to visualize daily patterns</p>
+    <p>🎓 Dropout Risk Detection System v2.1 with Interactive Attendance Heatmap</p>
     </div>
     """,
     unsafe_allow_html=True
