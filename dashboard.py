@@ -304,7 +304,7 @@ if st.session_state["activity_data_storage"]:
     for date_str, file_info in sorted(st.session_state["activity_data_storage"].items()):
         st.sidebar.text(f"• {date_str}: {file_info['rows']} rows")
 
-if st.sidebar.button("Generate Sample Activity", key="gen_sample_activity"):
+if st.sidebar.button("Generate Sample Activity", key="gen_sample_activity_main"):
     # Load main data to get student IDs - use temporary variables or fallback to sample
     df_main = load_and_merge()  # Always use sample data for generation
     sample_activity = generate_sample_daily_activity(df_main["student_id"].tolist(), activity_date)
@@ -318,7 +318,7 @@ if st.sidebar.button("Generate Sample Activity", key="gen_sample_activity"):
     st.sidebar.success(f"✅ Generated sample activity for {activity_date}")
 
 # Process all stored activity files
-process_activity_now = st.sidebar.button("🔄 Process All Activity Files", key="process_activity_btn", type="primary")
+process_activity_now = st.sidebar.button("🔄 Process All Activity Files", key="process_activity_btn_main", type="primary")
 
 # Process all stored activity files
 process_activity_now = st.sidebar.button("🔄 Process All Activity Files", key="process_activity_btn", type="primary")
