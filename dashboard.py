@@ -318,16 +318,21 @@ if st.sidebar.button("Generate Sample Activity", key="gen_sample_activity_main")
     st.sidebar.success(f"✅ Generated sample activity for {activity_date}")
 
 # Process all stored activity files
-process_activity_now = st.sidebar.button("🔄 Process All Activity Files", key="process_activity_btn_main", type="primary")
+process_activity_now = st.sidebar.button("🔄 Process All Activity Files", key="process_activity_btn", type="primary")
+
+st.sidebar.divider()
 
 # Process all stored activity files
-process_activity_now = st.sidebar.button("🔄 Process All Activity Files", key="process_activity_btn", type="primary")
+st.sidebar.header("🚨 Alert Rule Configuration")
 alert_thresholds = {
     "attendance_days": st.sidebar.number_input("Consecutive absences (>=)", 1, 30, 3, key="alert_att"),
     "score_days": st.sidebar.number_input("Consecutive low scores (>=)", 1, 30, 3, key="alert_score"),
     "assignment_days": st.sidebar.number_input("Consecutive assignment misses (>=)", 1, 30, 3, key="alert_assign"),
     "score_cutoff": st.sidebar.number_input("Low score threshold (<)", 0, 100, 40, key="score_cutoff")
 }
+
+st.sidebar.divider()
+st.sidebar.divider()
 
 # -----------------------
 # Sidebar: Data Input
