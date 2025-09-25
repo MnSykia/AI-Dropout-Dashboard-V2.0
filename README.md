@@ -4,7 +4,7 @@
 A Streamlit-based dashboard to monitor students and detect early signs of dropout risk.
 It integrates **attendance, scores, fees, and daily activity data** to provide real-time alerts for educators, mentors, students and parents.
 
-⚡ This is a prototype developed for the internal hackathon round of Smart India Hackathon (SIH) at Gauhati University, by Team Hacksa.
+⚡ This is a prototype developed for the internal hackathon round of Smart India Hackathon (SIH) at Gauhati University, by **Team Hacksa**.
 
 🔗 **Live Demo**: [ai-dropout-dashboard-v2.streamlit.app](https://ai-dropout-dashboard-v2.streamlit.app/)
 
@@ -27,7 +27,7 @@ It integrates **attendance, scores, fees, and daily activity data** to provide r
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/your-username/dropout-risk-dashboard.git
+git clone https://github.com/MnSykia/AI-Dropout-Dashboard-V2.0
 cd dropout-risk-dashboard
 ```
 
@@ -71,6 +71,8 @@ You can also upload your own CSVs:
 * **Fees CSV**: `student_id, total_fee_due, last_payment_date`
 * **Daily Activity CSV**: `student_id, date, attended, assignment_submitted, score`
 * **Heatmap CSV**: `ID, Name, YYYY-MM-DD ...` (dates as columns with `P` / `A` values)
+
+**Sample datasets for testing purposes are provided in the Sample CSVs folder.**
 
 ---
 
