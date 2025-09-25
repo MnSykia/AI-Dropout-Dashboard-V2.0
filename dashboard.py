@@ -411,8 +411,12 @@ thresholds = {
 # -----------------------
 # Load and process main data
 # -----------------------
-df = load_and_merge(uploaded_att, uploaded_scores, uploaded_fees) if (use_uploaded and process_now) else load_and_merge()
-df = evaluate_risk(df, thresholds)
+if st.session_state.get("force_new_data"):
+    att, sc, fees = generate_sample_data()
+    df = att.merge(sc, on="student_id").merge(fees, on="student_id")
+    st.session_state["force_new_data"] = False
+else:
+    df = load_and_merge(uploaded_att, uploaded_scores, uploaded_fees) if (use_uploaded and process_now) else load_and_merge()
 
 # -----------------------
 # Process daily activity files when button is clicked
@@ -565,6 +569,10 @@ c2.metric("🔴 Red", counts["Red"], help="High risk students requiring immediat
 c3.metric("🟡 Amber", counts["Amber"], help="Medium risk students to monitor closely")
 c4.metric("🟢 Green", counts["Green"], help="Low risk students")
 
+if st.button("🔄 Generate New Sample Data", key="gen_new_sample_data"):
+    st.session_state["force_new_data"] = True
+    st.rerun()
+    
 # -----------------------
 # Filters
 # -----------------------
@@ -595,11 +603,11 @@ display_cols = ["student_id","name","mentor","course","attendance_percent","avg_
 
 def highlight_risk(row):
     if row["rule_label"] == "Red":
-        return ["background-color: #ffcccb"] * len(row)
+        return ["background-color: #ffcccb; color: black;"] * len(row)
     elif row["rule_label"] == "Amber":
-        return ["background-color: #ffe4b5"] * len(row)
+        return ["background-color: #ffe4b5; color: black;"] * len(row)
     else:
-        return ["background-color: #90ee90"] * len(row)
+        return ["background-color: #90ee90; color: black;"] * len(row)
 
 styled_df = df_view[display_cols].style.apply(highlight_risk, axis=1)
 st.dataframe(
