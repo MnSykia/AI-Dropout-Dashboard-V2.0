@@ -699,6 +699,24 @@ with col_b:
     ax.set_title("Score Distribution by Risk Level")
     st.pyplot(fig)
 
+# Mentor risk distribution
+st.caption("Risk Distribution Across Mentors")
+mentor_risk_counts = df.groupby(["mentor","rule_label"]).size().unstack(fill_value=0)
+fig, ax = plt.subplots(figsize=(10, 5))
+mentor_risk_counts.plot(
+    kind="bar",
+    stacked=True,
+    color={"Red":"#ff4b4b","Amber":"#ffb84d","Green":"#66c266"},
+    ax=ax
+)
+ax.set_ylabel("Number of Students")
+ax.set_xlabel("Mentor")
+ax.set_title("Mentor-wise Risk Level Distribution")
+ax.legend(title="Risk Level", bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.xticks(rotation=45)
+plt.tight_layout()
+st.pyplot(fig)
+
 # -----------------------
 # Attendance Heatmap Section
 # -----------------------
@@ -881,27 +899,6 @@ if st.session_state.get("attendance_heatmap_data") is not None:
         st.warning("⚠️ Loaded heatmap data doesn't have enough columns. Expected: ID, Name, followed by date columns.")
 else:
     st.info("ℹ️ No attendance heatmap data loaded. Please upload a daily attendance CSV or generate sample data from the sidebar.")
-
-# -----------------------
-# Continue with existing charts
-# -----------------------
-# Mentor risk distribution
-st.caption("Risk Distribution Across Mentors")
-mentor_risk_counts = df.groupby(["mentor","rule_label"]).size().unstack(fill_value=0)
-fig, ax = plt.subplots(figsize=(10, 5))
-mentor_risk_counts.plot(
-    kind="bar",
-    stacked=True,
-    color={"Red":"#ff4b4b","Amber":"#ffb84d","Green":"#66c266"},
-    ax=ax
-)
-ax.set_ylabel("Number of Students")
-ax.set_xlabel("Mentor")
-ax.set_title("Mentor-wise Risk Level Distribution")
-ax.legend(title="Risk Level", bbox_to_anchor=(1.05, 1), loc='upper left')
-plt.xticks(rotation=45)
-plt.tight_layout()
-st.pyplot(fig)
 
 # Flag summary
 flag_rows = []
