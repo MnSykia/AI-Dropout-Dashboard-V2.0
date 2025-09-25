@@ -570,10 +570,6 @@ c2.metric("🔴 Red", counts["Red"], help="High risk students requiring immediat
 c3.metric("🟡 Amber", counts["Amber"], help="Medium risk students to monitor closely")
 c4.metric("🟢 Green", counts["Green"], help="Low risk students")
 
-if st.button("🔄 Generate New Sample Data", key="gen_new_sample_data"):
-    st.session_state["force_new_data"] = True
-    st.rerun()
-    
 # -----------------------
 # Filters
 # -----------------------
