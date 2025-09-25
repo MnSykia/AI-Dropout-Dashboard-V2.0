@@ -418,6 +418,8 @@ if st.session_state.get("force_new_data"):
 else:
     df = load_and_merge(uploaded_att, uploaded_scores, uploaded_fees) if (use_uploaded and process_now) else load_and_merge()
 
+df = evaluate_risk(df, thresholds)
+
 # -----------------------
 # Process daily activity files when button is clicked
 # -----------------------
@@ -577,26 +579,63 @@ if st.button("🔄 Generate New Sample Data", key="gen_new_sample_data"):
 # Filters
 # -----------------------
 with st.expander("🔍 Filters"):
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        mentors = sorted(df["mentor"].dropna().unique().tolist())
-        mentors_sel = st.multiselect("Mentor", ["All"] + mentors, default=["All"])
-    
-    with col2:
-        courses = sorted(df["course"].dropna().unique().tolist())
-        course_sel = st.multiselect("Course", ["All"] + courses, default=["All"])
-    
-    with col3:
-        label_sel = st.multiselect("Risk Label", ["Red","Amber","Green"], default=["Red","Amber","Green"])
+    col1, col2, col3, col4 = st.columns(4)
 
+    # Risk label filter
+    with col1:
+        label_sel = st.multiselect(
+            "Risk Label",
+            options=["Red", "Amber", "Green"],
+            default=[]
+        )
+
+    # Mentor filter
+    with col2:
+        mentors_sel = st.multiselect(
+            "Mentor",
+            options=["All"] + sorted(df["mentor"].dropna().unique().tolist()),
+            default=["All"]
+        )
+
+    # Course filter
+    with col3:
+        course_sel = st.multiselect(
+            "Course",
+            options=["All"] + sorted(df["course"].dropna().unique().tolist()),
+            default=["All"]
+        )
+
+    # Fee status filter (derived from fees_overdue_days)
+    with col4:
+        fee_status = pd.cut(
+            df["fees_overdue_days"],
+            bins=[-1, 0, 7, 30, float("inf")],
+            labels=["Paid", "Due <7d", "Due <30d", "Overdue"]
+        )
+        df["fees_status"] = fee_status.astype(str)
+
+        fee_sel = st.multiselect(
+            "Fee Status",
+            options=["All"] + sorted(df["fees_status"].unique().tolist()),
+            default=["All"]
+        )
+
+# -----------------------
 # Apply filters
+# -----------------------
 df_view = df.copy()
+
+if label_sel:
+    df_view = df_view[df_view["rule_label"].isin(label_sel)]
+
 if "All" not in mentors_sel:
     df_view = df_view[df_view["mentor"].isin(mentors_sel)]
+
 if "All" not in course_sel:
     df_view = df_view[df_view["course"].isin(course_sel)]
-df_view = df_view[df_view["rule_label"].isin(label_sel)]
+
+if "All" not in fee_sel:
+    df_view = df_view[df_view["fees_status"].isin(fee_sel)]
 
 # Display with better formatting
 display_cols = ["student_id","name","mentor","course","attendance_percent","avg_score","failed_attempts","fees_overdue_days","rule_label"]
