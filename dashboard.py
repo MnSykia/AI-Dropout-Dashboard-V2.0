@@ -412,8 +412,7 @@ thresholds = {
 # Load and process main data
 # -----------------------
 if st.session_state.get("force_new_data"):
-    att, sc, fees = generate_sample_data()
-    df = att.merge(sc, on="student_id").merge(fees, on="student_id")
+    df = load_and_merge() 
     st.session_state["force_new_data"] = False
 else:
     df = load_and_merge(uploaded_att, uploaded_scores, uploaded_fees) if (use_uploaded and process_now) else load_and_merge()
