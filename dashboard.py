@@ -899,6 +899,7 @@ if st.session_state.get("attendance_heatmap_data") is not None:
         st.warning("⚠️ Loaded heatmap data doesn't have enough columns. Expected: ID, Name, followed by date columns.")
 else:
     st.info("ℹ️ No attendance heatmap data loaded. Please upload a daily attendance CSV or generate sample data from the sidebar.")
+st.markdown("---")
 
 # Flag summary
 flag_rows = []
