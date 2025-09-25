@@ -1,0 +1,11 @@
+student_id,name,course,mentor,attendance_percent
+S1000,Student_0,CE-1,mentor_0,82.5
+S1001,Student_1,CE-2,mentor_1,74.2
+S1002,Student_2,CE-3,mentor_2,91.0
+S1003,Student_3,CE-1,mentor_3,65.3
+S1004,Student_4,CE-2,mentor_0,88.7
+S1005,Student_5,CE-3,mentor_1,59.2
+S1006,Student_6,CE-1,mentor_2,95.0
+S1007,Student_7,CE-2,mentor_3,70.1
+S1008,Student_8,CE-3,mentor_0,81.4
+S1009,Student_9,CE-1,mentor_1,67.8
