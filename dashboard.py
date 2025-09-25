@@ -133,7 +133,7 @@ def evaluate_risk(df, thresholds):
         else:
             f["attempts"] = "green"
 
-        fod = r.get("fees_overdue_days", 999)
+        fod = r["fees_overdue_days"] if "fees_overdue_days" in r else 999
         if fod >= thresholds["fees_overdue_days_red"]:
             f["fees"] = "red"
         elif fod >= thresholds["fees_overdue_days_amber"]:
@@ -967,7 +967,7 @@ if flag_rows:
 # -----------------------
 st.subheader("⚡ Actions")
 
-col1, col2, col3 = st.columns(3)
+col1, col2 = st.columns(2)
 
 with col1:
     # Download red list
@@ -998,14 +998,6 @@ with col2:
     else:
         st.info("No alerts to download")
 
-with col3:
-    # Generate new sample data
-    if st.button("🔄 Generate New Sample Data"):
-        # Clear session state
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.success("✅ Generated new sample data. Page will refresh.")
-        st.rerun()
 
 # -----------------------
 # Summary Statistics
